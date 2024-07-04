@@ -12,3 +12,6 @@
 data/
 outputs/
 .vscode/settings.json
+old scripts/
+
+testing.ipynb
