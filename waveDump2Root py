@@ -1,0 +1,176 @@
+import ROOT
+import numpy as np
+from array import array
+import os
+import glob
+
+def read_txt_file(filename):
+    is_trigger = 'TR_0_0' in filename
+    events = {}
+
+    with open(filename, 'r') as file:
+        while True:
+            # Read headers
+            header_lines = [file.readline().strip() for _ in range(8)]
+            if not header_lines[0]:
+                break
+
+            # Extract the header information
+            record_length = int(header_lines[0].split(":")[1])
+            board_id = int(header_lines[1].split(":")[1])
+            if is_trigger:
+                channel = 'trigger'
+            else:
+                channel = str(int(header_lines[2].split(":")[1]))
+            event_number = int(header_lines[3].split(":")[1])
+            pattern = int(header_lines[4].split(":")[1], 16)
+            trigger_time_stamp = int(header_lines[5].split(":")[1])
+            dc_offset = int(header_lines[6].split(":")[1], 16)
+            start_index_cell = int(header_lines[7].split(":")[1])
+
+            # Read the sample points
+            samples = []
+            for _ in range(record_length):
+                sample = file.readline().strip()
+                if sample:
+                    samples.append(float(sample))
+        
+            event = {
+                'RecordLength': record_length,
+                'BoardID': board_id,
+                'Channel': channel,
+                'EventNumber': event_number,
+                'Pattern': pattern,
+                'TriggerTimeStamp': trigger_time_stamp,
+                'DCOffset': dc_offset,
+                'StartIndexCell': start_index_cell,
+                'Samples': np.array(samples)
+            }
+        
+            events[event_number] = event
+
+    return events, channel
+
+def main(data_dir):
+    OUT_FILE = os.path.join(data_dir, "SiPM_data.root")
+
+    # Find all wave files and the trigger file in the directory
+    wave_files = glob.glob(os.path.join(data_dir, "wave_*.txt"))
+    trigger_file = glob.glob(os.path.join(data_dir, "TR_0_0.txt"))
+    
+    all_files = wave_files + trigger_file
+    
+    if not all_files:
+        print(f"No suitable files found in {data_dir}")
+        return
+
+    # Read data from all files
+    all_events = {}
+    channels = set()
+    for file in all_files:
+        print(f"Reading file: {file}")
+        events, channel = read_txt_file(file)
+        all_events[channel] = events
+        channels.add(channel)
+
+    print(f"Channels found: {channels}")
+    for ch in channels:
+        print(f"Channel {ch} has {len(all_events[ch])} events")
+        if len(all_events[ch]) > 0:
+            first_event = next(iter(all_events[ch].values()))
+            print(f"Sample of data for channel {ch}:")
+            print(f"  RecordLength: {first_event['RecordLength']}")
+            print(f"  BoardID: {first_event['BoardID']}")
+            print(f"  EventNumber: {first_event['EventNumber']}")
+            print(f"  First few samples: {first_event['Samples'][:5]}")
+
+    # Create a new ROOT file and tree
+    try:
+        root_file = ROOT.TFile(OUT_FILE, "RECREATE")
+        if not root_file or root_file.IsZombie():
+            print(f"Error: Could not create ROOT file {OUT_FILE}")
+            return
+
+        tree = ROOT.TTree("tree", "SiPM Data")
+        if not tree:
+            print("Error: Could not create TTree")
+            return
+
+        # Create branches in the tree
+        record_length = array('i', [0])
+        board_id = array('i', [0])
+        event_number = array('i', [0])
+        pattern = array('i', [0])
+        trigger_time_stamp = array('i', [0])
+        dc_offset = array('i', [0])
+        start_index_cell = array('i', [0])
+        
+        samples = {ch: array('f', 1024*[0.]) for ch in channels}
+
+        tree.Branch("RecordLength", record_length, "RecordLength/I")
+        tree.Branch("BoardID", board_id, "BoardID/I")
+        tree.Branch("EventNumber", event_number, "EventNumber/I")
+        tree.Branch("Pattern", pattern, "Pattern/I")
+        tree.Branch("TriggerTimeStamp", trigger_time_stamp, "TriggerTimeStamp/I")
+        tree.Branch("DCOffset", dc_offset, "DCOffset/I")
+        tree.Branch("StartIndexCell", start_index_cell, "StartIndexCell/I")
+        
+        for ch in channels:
+            branch_name = f"SamplesTrigger" if ch == 'trigger' else f"SamplesCh{ch}"
+            tree.Branch(branch_name, samples[ch], f"{branch_name}[RecordLength]/F")
+
+        for event_num in sorted(set().union(*[set(events.keys()) for events in all_events.values()])):
+            try:
+                # Fill the event information for the first available channel
+                first_channel = next(iter(all_events.keys()))
+                if event_num not in all_events[first_channel]:
+                    continue  # Skip events not in the first channel
+
+                event = all_events[first_channel][event_num]
+                
+                record_length[0] = event['RecordLength']
+                board_id[0] = event['BoardID']
+                event_number[0] = event['EventNumber']
+                pattern[0] = event['Pattern']
+                trigger_time_stamp[0] = event['TriggerTimeStamp']
+                dc_offset[0] = event['DCOffset']
+                start_index_cell[0] = event['StartIndexCell']
+                
+                for ch in channels:
+                    event_ch = all_events[ch].get(event_num)
+                    if event_ch:
+                        for i in range(len(event_ch['Samples'])):
+                            samples[ch][i] = event_ch['Samples'][i]
+                    else:
+                        for i in range(record_length[0]):
+                            samples[ch][i] = 0.0
+
+                tree.Fill()
+            except Exception as e:
+                print(f"Error processing event {event_num}: {e}")
+                continue
+
+        # Write the tree
+        bytes_written = tree.Write()
+        if bytes_written == 0:
+            print("Error: No data written to tree")
+        else:
+            print(f"Tree written successfully. Bytes written: {bytes_written}")
+
+        entries = tree.GetEntries()
+        print(f"Number of entries in tree: {entries}")
+        print(f"Total events processed: {len(all_events[next(iter(all_events.keys()))])}")
+        print(f"Channels processed: {sorted(channels, key=str)}")        
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        if 'root_file' in locals() and root_file:
+            root_file.Close()
+            print(f"ROOT file closed: {OUT_FILE}")
+
+if __name__ == "__main__":
+    DATA_DIR = "./data/set2/27"  # You can modify this or pass it as an argument
+    main(DATA_DIR)
