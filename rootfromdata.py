@@ -4,6 +4,8 @@ import uproot
 import awkward as ak
 from tqdm import tqdm
 import os
+from scipy.interpolate import interp1d
+
 
 
 def read_detector_data(file_path):
@@ -46,6 +48,38 @@ def read_detector_data(file_path):
     print(f"Finished reading {len(df)} events from {file_path}")
     return df
 
+
+
+def cfd_timing(signal, fraction=0.5, delay=5, interpolation_factor=10):
+    # Normalize the signal
+    normalized_signal = signal / np.max(signal) # Normalize to 1
+    
+    # Create the delayed signal
+    delayed_signal = np.pad(normalized_signal, (delay, 0))[:-delay] # Pad with zeros at the beginning
+    
+    # Create the attenuated signal
+    attenuated_signal = fraction * normalized_signal # Attenuate the signal
+    
+    # Create the CFD signal
+    cfd_signal = delayed_signal - attenuated_signal # Subtract the attenuated signal from the delayed signal
+    
+    # Find zero crossing
+    zero_crossings = np.where(np.diff(np.sign(cfd_signal)))[0] # Find zero crossings
+    
+    if len(zero_crossings) == 0: 
+        return None
+    
+    # Interpolate for better timing resolution
+    x = np.arange(len(cfd_signal)) 
+    f = interp1d(x, cfd_signal, kind='cubic') # Interpolate the CFD signal with a cubic spline - this means we can find the zero crossing with a higher resolution than the original signal 
+    x_fine = np.linspace(zero_crossings[0]-1, zero_crossings[0]+1, interpolation_factor) # Create a finer x range around the zero crossing 
+    y_fine = f(x_fine) # Evaluate the interpolated function at the finer x range
+    
+    # Find the interpolated zero crossing
+    zero_crossing_fine = x_fine[np.argmin(np.abs(y_fine))] # Find the zero crossing in the finer x range
+    
+    return zero_crossing_fine
+
 def process_detector_data(df, channel):
     print(f"Processing data for channel {channel}")
     threshold = 0.5  # 50% of max value
@@ -54,7 +88,15 @@ def process_detector_data(df, channel):
     df['values'] = df['values'].apply(lambda x: x - np.mean(x[:40]))
     df['max'] = df['values'].apply(lambda x: x.max())
     df['max_index'] = df['values'].apply(lambda x: x.argmax())
+
+
+
+    #leading edge threshold crossing
     df['leading_edge'] = df['values'].apply(lambda x: np.argmax(x > x.max() * threshold))
+
+    # CFD method
+
+   
 
     if channel != 99:
         #df['integral'] = df['values'].apply(lambda x: x[x > 0].sum())
@@ -64,7 +106,12 @@ def process_detector_data(df, channel):
         # Add blank time diff column for this channel
         df['time_diff'] = 0
 
-    df.drop(columns=['values', 'bg', 'Record Length'], inplace=True)
+    if channel == 0:
+        df['cfd_time'] = df['values'].apply(cfd_timing) # Apply the CFD timing function to the values column to get the CFD time for each event in the DataFrame 
+
+
+    df.drop(columns=['bg', 'Record Length'], inplace=True)
+    #df.drop(columns=['values'], inplace=True) #uncomment to remove waveform data
     df.columns = [str(channel) + '_' + col if col not in ['Event Number', 'Trigger Time Stamp'] else col for col in df.columns]
     print(f"Finished processing data for channel {channel}")
     return df
