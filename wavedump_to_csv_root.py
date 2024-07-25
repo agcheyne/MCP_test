@@ -257,5 +257,10 @@ def main():
     print(f"Finished processing. DataFrame has been saved to {output_file}")
 
 
+    import ROOT
+    rdf = ROOT.RDF.FromPandas(results_df)
+    rdf.Snapshot("tree", "SiPM_df2.root")
+
+
 if __name__ == "__main__":
     main()
