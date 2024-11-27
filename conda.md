@@ -4,7 +4,7 @@ From https://docs.anaconda.com/miniconda/install/
 ## install
 These four commands download the latest 64-bit version of the Linux installer, rename it to a shorter file name, silently install, and then delete the installer:
 
-**Note:should not install in home, change the directory to a workdisk instead**
+**Note: we should not install in home, change <WORKDIR> to the path to your workdisk area instead**
 
 ```bash
 mkdir -p /<WORKDIR>/miniconda3
