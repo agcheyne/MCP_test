@@ -61,11 +61,14 @@ conda env list
 ```
 
 ### Example 
+```bash
 conda create -n myenv python=3.9
+```
+```bash
 conda install numpy pandas matplotlib jupyterlab ipykernel
+```
 
-
-9. Document Your Workflows
+## Document Your Workflows
 As you set up environments and install packages, keep track of:
 
 Which environments you create (e.g., myenv for project X).
