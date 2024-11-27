@@ -4,6 +4,8 @@ From https://docs.anaconda.com/miniconda/install/
 ## install
 These four commands download the latest 64-bit version of the Linux installer, rename it to a shorter file name, silently install, and then delete the installer:
 
+**Note:should not install in home, change the directory to a workdisk instead**
+
 ```bash
 mkdir -p ~/miniconda3
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
@@ -65,7 +67,10 @@ conda env list
 conda create -n myenv python=3.9
 ```
 ```bash
-conda install numpy pandas matplotlib jupyterlab ipykernel
+conda activate myenv
+```
+```bash
+
 ```
 
 ## Document Your Workflows
