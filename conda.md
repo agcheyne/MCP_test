@@ -5,17 +5,23 @@ From https://docs.anaconda.com/miniconda/install/
 These four commands download the latest 64-bit version of the Linux installer, rename it to a shorter file name, silently install, and then delete the installer:
 
 **Note: we should not install in home, change <WORKDIR> to the path to your workdisk area instead**
+for example mine would be /w/work5/home/andrewc
 
 ```bash
-mkdir -p /<WORKDIR>/miniconda3
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /<WORKDIR>/miniconda3/miniconda.sh
-bash /<WORKDIR>/miniconda3/miniconda.sh -b -u -p /<WORKDIR>/miniconda3
-rm /<WORKDIR>/miniconda3/miniconda.sh
+mkdir -p /w/work5/home/andrewc/miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /w/work5/home/andrewc/miniconda3/miniconda.sh
+bash /w/work5/home/andrewc/miniconda3/miniconda.sh -b -u -p /w/work5/home/andrewc/miniconda3
+rm /w/work5/home/andrewc/miniconda3/miniconda.sh
 ```
-Run the following to activate conda (I had to manually navigate and run it)
+Run the following to activate conda
 ```bash
-source /<WORKDIR>/miniconda3/bin/activate
+source /w/work5/home/andrewc/miniconda3/bin/activate
 ```
+This last line didn't work for me, I had to:
+>cd /w/work5/home/andrewc/miniconda3/bin/
+>
+>./activate
+
 
 Initialise and update conda.
   ```bash
