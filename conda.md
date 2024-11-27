@@ -69,7 +69,7 @@ conda env create -f environment.yml
 conda env list
 ```
 
-### Example 
+### Example for a generic package or common things for me
 ```bash
 conda create -n myenv python=3.9
 ```
@@ -77,7 +77,7 @@ conda create -n myenv python=3.9
 conda activate myenv
 ```
 ```bash
-
+conda install numpy pandas matplotlib jupyterlab ipykernel
 ```
 
 ## Document Your Workflows
