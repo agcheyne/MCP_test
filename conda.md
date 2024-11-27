@@ -7,14 +7,14 @@ These four commands download the latest 64-bit version of the Linux installer, r
 **Note:should not install in home, change the directory to a workdisk instead**
 
 ```bash
-mkdir -p ~/miniconda3
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
-bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
-rm ~/miniconda3/miniconda.sh
+mkdir -p /<WORKDIR>/miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /<WORKDIR>/miniconda3/miniconda.sh
+bash /<WORKDIR>/miniconda3/miniconda.sh -b -u -p /<WORKDIR>/miniconda3
+rm /<WORKDIR>/miniconda3/miniconda.sh
 ```
 Run the following to activate conda (I had to manually navigate and run it)
 ```bash
-source ~/miniconda3/bin/activate
+source /<WORKDIR>/miniconda3/bin/activate
 ```
 
 Initialise and update conda.
